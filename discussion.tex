@@ -1,0 +1,111 @@
+\section{Query Optimizer Integration}
+\label{discussion}
+
+In the earlier sections, given a user query, the standard plan choice
+of the Postgres optimizer was used even with the modified operator
+implementations. That is, while the execution engine was PCM-conscious,
+the presence of PCM was completely \emph{opaque} to the optimizer.
+Given the read-write asymmetry of PCM in terms of both latency and wear
+factor, it is possible that alternative plans, capable of providing better
+performance profiles, may exist in the plan search space.  To discover
+such plans, the database query optimizer needs to incorporate PCM
+awareness in both the operator cost models and the plan enumeration
+algorithms.
+
+We introduced a new metric of \emph{writes} in the operator cost model using the estimators described in Sections~\ref{sort} to \ref{gby}. The existing latency based cost models of the operators were also revised to account for the additional latency incurred during writes. The query optimizer is redesigned to now allow the user to input a new parameter which we call the \emph{slack} denoted by $\lambda$. The slack represents the maximum relative slowdown, compared to the least response time query plan, that is acceptable to the user in lieu of getting better write performance. The optimizer then examines all the plans which fall under this $\lambda$ window and returns the least writes incurring plan.
+
+Since we can no longer discard a plan just on the basis of latency cost, the plan enumeration process of the optimizer was modified to now propagate the the entire list of plans at each operator node up the plan tree. At the root, the optimizer exercises its maximum slack limit to come up with the least writes plan.
+
+In the light of these modifications, let
+us revisit Query Q13, for which the default plan was shown in
+Figure~\ref{fig:plan_trees}(a). With a slack value of 0 indicating no slack being allowed, we got a new execution plan wherein the
+merge left join between the \textit{customer} and \textit{orders}
+tables is replaced by a hash left join.  The relative performance of
+these two alternatives with regard to PCM Writes and Cycles, are shown
+in Figures~\ref{fig:perf_comp}(a) and (b), respectively. We observe
+here that there is a \emph{huge difference} in both the query response times as well as writes overheads for both the plans.
+Specifically, the alternative plan reduces the writes by well over an
+order of magnitude!
+
+
+\begin{figure}[htbp]
+\centering
+	
+\subfloat[Performance of Alternative Plans]{
+\includegraphics[height=29mm]{q13_alternate_plan.png}
+}
+
+\subfloat[Overall performance comparison]{
+\begin{small}
+
+  \begin{tabular}{p{2cm}p{2cm}p{2cm}p{2cm}}
+  \toprule                                                                                                
+  
+  \textbf{Metric} & \textbf{Opt(PCM-O) Exec(PCM-O) } & \textbf{Opt(PCM-O) Exec(PCM-C)} & \textbf{Opt(PCM-C) Exec(PCM-C)}\\
+  \midrule                                                                                                
+  
+  \textbf{Writes(words)} &  $233.6 \times 10^6$ & $110.6 \times 10^6$ & $4.66 \times 10^6$\\ 
+  \textbf{Cycles} &  $13.1 \times 10^9$ & $10.4 \times 10^9$ & $3.2 \times 10^9$\\ 
+  \bottomrule                                                                                             
+  \end{tabular}                                                                                           
+\end{small}                                                                                           
+}
+\caption{Performance comparison}
+\label{fig:perf_comp}
+\end{figure}
+
+As we gradually increased the value of $\lambda$, we didn't notice any change in plans. When the $\lambda$ value was put as high as 12000, we observed that the hash left join gave way to nested loop join, clearly indicating the humongous latency cost associated with it despite its write savings.
+
+To put matters into perspective, Figure~\ref{fig:perf_comp}(b) summarizes
+the relative performance benefits obtained as the database layers are
+gradually made PCM-conscious (in the figure, the labels Opt and Exec refer to Optimizer and Executor, respectively, while PCM-O and PCM-C
+refer to PCM-Oblivious and PCM-Conscious, respectively). 
+
+The results clearly indicate that future query optimizers for PCM-based architectures need to incorporate these dual metrics of \emph{writes} and \emph{time} in order to decide the most suitable plan for executing a given query.
+
+
+
+
+\begin{comment}
+\begin{figure}[h]
+	%\centering
+	\subfloat[Database layers]{
+	\includegraphics[width=4cm]{db_levels.png}
+	}
+   	\subfloat[Q13 alternate plan]{
+   	\begin{tikzpicture}[scale=., transform shape]
+
+\tikzstyle{every node} = [rectangle, fill=gray!5]
+
+\node (d) at (0,3) {Index Scan / Filter};
+\node (c) at (0,1.5) {CUSTOMER};
+
+\node (s) at (3,3) {Hash};
+\node (p) at (3,2.25) {Seq. Scan / Filter};
+\node (a) at (3,1.5) {ORDERS};
+
+\node (e) at (1.5,4) {Hash Left Join};
+\node (f) at (1.5,5)  {Group Aggregate};
+\node (g) at (1.5,6)  {Hash Aggregate};
+\node (h) at (1.5,7)  {Sort};
+
+
+\draw[-] (c) -- (d);
+\draw[-] (a) -- (p);
+\draw[-] (d) -- (e);
+\draw[-] (p) -- (s);
+\draw[-] (s) -- (e);
+\draw[-] (e) -- (f);
+
+\draw[-] (f) -- (g);
+\draw[-] (g) -- (h);
+
+\end{tikzpicture}
+   	}
+  %\centering                                                                                             
+
+\caption{Alternative Execution Plans for Query Q13}
+	\label{fig:layers}
+	
+\end{figure}
+\end{comment}

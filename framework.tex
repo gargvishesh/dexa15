@@ -1,0 +1,62 @@
+\section{Problem Framework}
+\label{assumptions}
+In this section, we overview the problem framework, the assumptions made
+in our analysis, and the notations used in the sequel.
+
+As mentioned in the Introduction, we model the \model{} memory
+organization (Figure~\ref{fig:pcm_models} (c)). The DRAM buffer is of
+size $D$ and is organized in a \emph{K-way set-associative} manner, like the higher level cache memories.
+A \textit{data-comparison write (DCW)} scheme \cite{write} is used for
+the writing of PCM memory blocks during eviction from DRAM -- in this
+scheme, the memory controller compares the existing PCM block to the newly
+evicted DRAM block, and selectively writes back only the modified words.
+Further, \textit{N-Chance}~\cite{nchance} is used as the DRAM eviction
+policy -- here, the first clean way in the $N$ least recently used ways
+(assuming $N$ is less than $K$, the DRAM cache associativity) in a set
+is chosen as the eviction victim. Only when all the $N$ ways are dirty,
+the LRU entry is evicted. We choose this scheme due to its preference
+for evicting non-dirty entries over dirty candidates, thereby saving
+on writes.
+
+As described above, the simulator implements a realistic DRAM
+buffer. However, in our write analyses and estimators, we assume for
+tractability that there are no conflict misses in the DRAM. Thus, for
+any operations dealing with data whose size is within the DRAM capacity,
+our analysis assumes no evictions and consequently no writes.
+
+With regard to the operators, we use $R$ to denote the input relation
+for the \textit{sort} and \textit{group-by} unary operators.  Whereas,
+for the binary \textit{hash join} operator, $R$ is used to denote the
+smaller relation, on which the hash table is constructed, while $S$
+denotes the probing relation. 
+
+We assume that all the input relations are completely PCM-resident.
+Further, for simplicity of presentation, we assume that the sort,
+hash-join and group-by expressions are on single relational attributes --
+the extension to multiple attributes is straightforward.
+
+A summary of the main notation used in the analysis of the following
+sections is provided in Table~\ref{tab:notations}.
+
+\begin{table}[!h]
+\centering
+\caption{Notations Used in Operator Analysis}
+\label{tab:notations}
+\begin{small}
+\begin{tabular}{p{2cm}p{9cm}}
+\toprule  
+\textbf{Term} & \textbf{Description}\\ 
+\midrule
+\textbf{$D$} & DRAM size\\
+\textbf{$K$} & DRAM Associativity\\
+\textbf{$P$} & Pointer size\\
+\textbf{$N_R, N_S$} & Row cardinality of relations R and S, respectively\\
+\textbf{$L_R, L_S$} & Tuple size of relations R and S, respectively\\
+\textbf{$B$} & Number of buckets in hash table\\
+\textbf{$size_{entry}$} & Size of each hash table entry\\
+\textbf{$J,G$} & Output tuple cardinalities of join and group-by operators, respectively\\
+\textbf{$size_{j},size_{g}$} & Output tuple sizes of join and group-by operators, respectively\\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{table}

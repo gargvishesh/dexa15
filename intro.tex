@@ -1,0 +1,164 @@
+\section{Introduction}
+\label{sec:intro}
+%
+Phase Change Memory (PCM) is a recently developed non-volatile memory
+technology, constructed from chalcogenide glass material, that stores
+data by switching between crystalline (\emph{binary 0}) and amorphous 
+(\emph{binary 1}) states. Broadly speaking, it is expected to provide an attractive
+combination of the best features of conventional disks (persistence,
+capacity) and of DRAM (access speed). For instance, it is
+about 2 to 4 times denser than DRAM, while providing a DRAM-comparable
+read latency.  On the other hand, it consumes much less energy
+than magnetic hard disks while providing substantively smaller write latency. Due to this suite of  desirable features, PCM technology is
+expected to play a prominent role in the next generation of computing
+systems, either augmenting or replacing current components in the memory
+hierarchy~\cite{qureshi,zhou,lee}.
+
+A limitation of PCM, however, is that there is a significant difference
+between the read and write behaviours in terms of energy, latency and
+bandwidth. A PCM write, for example, consumes 6 times more energy than
+a read. Moreover, PCM has limited write endurance since a memory cell
+becomes unusable after the number of writes to the cell exceed a threshold
+determined by the underlying glass material. A summary representation
+of the characteristics of PCM as compared to DRAM and HDD, is shown in
+Table~\ref{tab:tab_pcm_char}.
+
+From the table, it is evident that PCM-based applications need to be
+redesigned to minimize both the number of writes and the skew in their
+distribution across the memory cells.  Consequently, several database
+researchers have, in recent times, focused their attention on devising
+new implementations of the core database operators that are adapted to
+the idiosyncrasies of the PCM environment (e.g.~\cite{chen,viglas}).
+
+\begin{table}[!h] 
+
+\caption{\bf Comparison of memory technologies \cite{chen}}
+\label{tab:tab_pcm_char} 
+\begin{small}
+  \begin{tabular}{p{3cm}p{2.5cm}p{3cm}p{3cm}} 
+  \toprule
+    &  \textbf{DRAM} & \textbf{PCM} &  \textbf{HDD} \\
+  \midrule
+  \textbf{Read energy} & 0.8 J/GB & 1 J/GB  & 65 J/GB \\
+  \textbf{Write energy} & 1.2 J/GB & 6 J/GB  & 65 J/GB \\
+  \textbf{Idle power} & $\sim$100 mW/GB & $\sim$1 mW/GB  & $\sim$10 W/TB \\
+  \textbf{Endurance} & $\infty$ & $10^6 - 10^8$  & $\infty$ \\
+  \textbf{Page size} & 64B & 64B  & 512B \\
+  \textbf{Page read latency}& 20-50ns & $\sim50 ns$  & $\sim 5ms$ \\
+  \textbf{Page write latency} & 20-50$ns$ & $\sim 1 \mu$s  & $\sim5ms$ \\
+  \textbf{Write bandwidth}  & $\sim$GB/s per die & 50-100 MB/s per die  & $\sim$200 MB/s per drive \\
+  \textbf{Density} & $1\times$ & 2-4$\times$ & N/A \\
+  \bottomrule 
+  \end{tabular} 
+\end{small} 
+\end{table}
+
+%\newpage
+\subsection*{Architectural Model}
+The prior database work has primarily focused on computing
+architectures wherein either (a) PCM completely replaces the
+DRAM memory~\cite{chen}; or (b) PCM and DRAM co-exist side-by-side
+and are independently controlled by the software~\cite{viglas}. We
+hereafter refer to these options as {\bf \modelPcmRam{}} and
+{\bf \modelExplicit{}}, respectively.
+
+However, a third option that is gaining favor in the architecture
+community is where the PCM is augmented with a small hardware-managed
+DRAM buffer~\cite{qureshi}. In this model, which we refer to as
+{\bf \model{}}, the address space of the application maps to PCM and the
+DRAM buffer can simply be visualized as yet another level of the existing
+cache hierarchy.  For ease of comparison, these various configurations
+are pictorially shown in Figure~\ref{fig:pcm_models}.
+
+\begin{figure}[htbp]
+	\includegraphics[height=50mm]{PCM_Models.png}\centering
+	\caption{PCM-based Architectural Options}
+	\label{fig:pcm_models}
+\end{figure}
+ 
+We, for the first time in the literature, design and evaluate algorithms
+that are tuned to the \model{} model. Note that though this model was mentioned in
+\cite{chen}, the design and evaluation was carried out only for \modelPcmRam{}.
+There are several practical advantages of the \model{} configuration:
+First, the write latency drawback of \modelPcmRam{} can be largely
+concealed by the intermediate DRAM buffer~\cite{qureshi}. Second,
+existing applications can be used \textit{as is} but still manage to take
+advantage of both the DRAM and the PCM. This is in stark contrast to the
+\modelExplicit{} model which requires incorporating additional machinery,
+either in the program or in the OS, to distinguish between data mapped
+to DRAM and to PCM -- for example, by having separate address space
+mappings for the different memories.
+
+\subsection*{Our Work}
+
+\begin{comment}
+In this paper, we investigate the design and evaluation of query execution
+engines for the \model{} memory model.  Specifically, we propose modified
+PCM-conscious implementations of the ``workhorse'' database operators:
+\textit{sort}, \textit{hash join} and \textit{group-by}, that reduce
+\emph{both} query writes and response times. Note that it is trivially
+easy to reduce writes by \emph{sacrificing} the response times --
+for instance, by replacing quicksort with selection sort, or hash join
+with nested-loops join. However, our solutions reduce the writes while
+concurrently \emph{improving} the timeliness of the query results.
+\end{comment}
+
+In this paper, we investigate the design and evaluation of query execution
+engines for the \model{} memory model.  Specifically, we propose modified
+PCM-conscious implementations of the ``workhorse'' database operators:
+\textit{sort}, \textit{hash join} and \textit{group-by}, that reduce
+\emph{both} query writes and response times.  Note that it is trivially
+easy to reduce writes by \emph{sacrificing} the response times --
+for instance, by replacing quicksort with selection sort, or hash join
+with nested-loops join. However, our solutions reduce the writes while
+concurrently \emph{improving} the timeliness of the query results. These implementations leverage existing "off-the-shelf" algorithms that have hitherto been overlooked for the specific application of reducing writes. The results show that we can reap significant benefits by replacing PCM oblivious operators with their PCM conscious versions. The new algorithms share most of the code with existing operator implementations indicating their ease of incorporation in existing systems.
+
+
+
+We have implemented the modified operators on Multi2sim \cite{multi2sim},
+a state-of-the-art architectural simulator, after incorporating a
+major extension to support the modelling of PCM.  The performance of
+the operators is evaluated on \emph{complete} TPC-H benchmark queries --
+this is a noteworthy point since earlier studies of PCM databases had only
+considered operator performance in isolation.  But, it is possible that
+optimizing a specific operator may be detrimental to other downstream
+operators that follow it in the query execution plan. For instance,
+the proposal in \cite{chen} to keep nodes unsorted in B$^+$ indexes,
+while saving on writes, can be detrimental to the running times of
+subsequent operators, e.g. join filters, that leverage index ordering.
+
+The experimental results suggest that, as compared to the original
+PCM-oblivious operators, our new implementations collectively offer
+substantive benefits with regard to PCM writes -- the number is typically
+brought down \emph{by a factor of two to three}.  Concurrently, the query
+response times are also brought down by about \emph{20 to 30 percent}.
+As a sample case in point, for TPC-H Query 19, savings of 64\% in PCM
+writes are achieved with a concomitant 32\% reduction in CPU cycles.
+
+A unique feature of our analysis is that we also evaluate the writes with
+regard to their \emph{distribution} over the memory cells. This is because
+a skewed distribution adversely impacts the endurance of cells with high
+write rates, raising the frequency at which wear-leveling mechanisms
+have to be put into play by the system. We observe that our algorithms don't introduce any new skew while achieving the reduction in writes and cycles.
+
+Finally, we provide simple approximate mathematical \emph{estimators} for the
+number of writes incurred by the new operators and validate them in our
+experiments. These estimators are then incorporated in the query optimizer's
+cost model to come up up with the most suitable plan in this new paradigm.
+
+In a nutshell, the new PCM-conscious operators proposed in this paper
+provide both \emph{short-term and long-term performance benefits}.
+Overall, these outcomes augur well for the impending migration of database
+engines to PCM-based computing platforms.
+
+\subsection*{Organization}
+The remainder of this paper is organized as follows: We define the
+problem framework in Section~\ref{assumptions}. The design of the new
+PCM-conscious database operators, and their theoretical analysis,
+are presented in Sections~\ref{sort}, \ref{hj} and \ref{gby}.
+Our experimental framework and the simulation results are reported in
+Sections~\ref{sec:exp} and \ref{sec:results}, respectively. This is followed by a
+discussion on optimizer integration in Section~\ref{discussion}. The
+related literature is reviewed in Section~\ref{relWork}. Finally,
+Section~\ref{conclusion} summarizes our conclusions and outlines future
+research avenues.

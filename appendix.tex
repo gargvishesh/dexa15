@@ -1,0 +1,193 @@
+\newpage
+\section{Appendix}
+
+\subsection{DRAM size sensitivity analysis}
+In this section, we cover the scenario wherein the available DRAM size
+at runtime is less than that anticipated prior to the query execution --
+for example, due to concurrent query processing.  To model this scenario,
+we experiment with DRAM sizes of 512 KB, 1 MB and 2 MB. Note that, for
+each of these cases, all the algorithms continue to assume 4 MB as the
+available DRAM size, oblivious to the actual reduction in the availability
+of DRAM, and hence continue to execute accordingly. The results are shown
+in Figures~\ref{fig:sort}, \ref{fig:join} and \ref{fig:gby} for the Sort,
+Hash Join and Group By operators, respectively.
+
+In Figure~\ref{fig:sort}, we observe that the Sort operator provides average savings
+for Q13 of about 47\% in Writes and 20\% in Cycles.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[height=29mm]{sort_q13.png}
+    \caption{Sort (Q13)}
+	\label{fig:sort}
+\end{figure}
+
+
+
+
+
+
+%\subsubsection{Sort}
+
+\begin{figure}[h]
+	\centering
+	\subfloat[Q16]{	
+  	\includegraphics[height=29mm]{hj_q16.png}
+	}
+%	\hspace{0mm}
+	\subfloat[Q19]{
+  	\includegraphics[height=29mm]{hj_q19.png}
+	}
+	\caption{Hash Join}
+	\label{fig:join}
+\end{figure}
+
+Turning our attention to Figure~\ref{fig:join}, we find that the hash join provides
+$17\%$ improvement in Writes and $50\%$ in Cycles for Q16. Similarly, for Q19, it provides
+savings of about $42\%$ in Writes and $50\%$ in Cycles.
+
+\begin{figure}[htbp]
+\centering
+\subfloat[Q13]{
+  \includegraphics[height=29mm]{gb_q13.png}
+}
+%\hspace{0mm}
+\subfloat[Q16]{
+  \includegraphics[height=29mm]{gb_q16.png}
+}
+\caption{Group By}
+\label{fig:gby}
+\end{figure}
+
+Finally, moving on to Figure~\ref{fig:gby}, the group-by operator in
+Q16 provides Writes savings of $78\%$ and Cycles savings of $26\%$.
+The hash table for group-by being much smaller than all DRAM variants for Q13, the
+change in the DRAM size did not materially impact the Writes and
+Cycles, consistently yielding the same improvement of 4\% and 1\% for the two
+metrics, respectively.
+
+Thus, we can conclude that the savings obtained by our algorithms are
+not restricted to the environment where the DRAM is exclusively available
+to one process. Instead, our algorithms can handle the unpredictability
+in the DRAM availability due to multiple running processes equally well,
+thereby being sufficiently robust to volatile system behaviour.
+
+\subsection{Validating Write Estimators}
+\label{validation}
+
+We now move on to validating the estimators
+(presented in Section~\ref{sort} through \ref{gby})  for the number of
+writes incurred by the various database operators.
+
+\subsubsection{Sort}
+The size of the $orders$ table is approximately $214 \times 10^6$ bytes. The
+conventional quicksort algorithm for this table in Q13 incurred writes of $233.6
+\times 10^6$ words $= 934.4 \times 10^6 $bytes. Using Equation
+\ref{eq:sort_conv}, the expected number of writes were: 
+
+\begin{dmath}
+\begin{small}
+W_{sort\_conv}(bytes) = N_RL_R (0.5 \lceil log_2(\frac{N_R L_R}{D}) \rceil + 1) \\
+\hspace*{100}= 214 \times 10^6 (0.5 \lceil log_2(\frac{214 \times 10^6}{4 * 10^6}) \rceil + 1) = 856 \times 10^6 
+\end{small}
+\end{dmath}
+
+The PCM-conscious version used multi-pivot sort algorithm and
+incurred writes of $110.6 \times 10^6$ words $= 441.8 \times 10^6 $
+bytes. Replacing the values for $N_R L_R$ in Equation \ref{eq:mpivot},
+we get the writes as 
+\begin{small}
+$$W_{mpivot}(bytes) \approx 2 \times 214 \times
+10^6  = 428 \times 10^6 $$. 
+\end{small}
+Thus both the estimates are close to the
+observed writes.
+
+
+
+\subsubsection{Hash Join}
+For the hash join in Q19, the values of $N_R$, $size_{entry}$, $J$,
+$size_{j}$ are $2 \times 10^5$, $8$, $120$ and $8$, respectively. Here,
+the observed writes for PCM-oblivious hash join were $0.90 \times 10^6$
+words $= 3.6 \times 10^6$ bytes. Substituting the parameter values in Equation
+\ref{eq:ht_conv}, we get the estimated writes as: 
+
+\begin{dmath}
+\begin{small}
+W_{ht\_conv}(bytes) = N_R \times (size_{entry} + P) + J \times size_{j} \\
+\hspace*{80}= 2 \times 10^5 (8+4) + 120 \times 8 \approx 2.4 \times 10^6 
+\end{small}
+\end{dmath}
+
+Now, for the PCM-conscious version, the estimated writes are given by Equation \ref{eq:ht_pcm},
+and substituting  the  parameter values, the writes are given by:  
+\begin{small}
+$$W_{ht\_pcm}(bytes) = 2 \times 10^5 (8-3) + 120 \times 8 \approx 10^6$$
+\end{small}
+which is close to the actual writes of $0.32 \times 10^6$ words $=
+1.28 \times 10^6$ bytes.
+
+\begin{table}[!h]                                                                                       
+\centering                                                                                              
+\caption{Validation of Write Estimators}
+  \label{tab:estimator_validation}                                                                                
+  %\centering                                                                                             
+  \begin{small}                                                                                           
+  \begin{tabular}{p{5cm}p{2cm}p{2cm}p{1cm}}
+  \toprule                                                                                                
+  
+  \textbf{Operator} & \textbf{Esimated Writes} (e) & \textbf{Observed Writes} (o) & \textbf{Error Factor} $\frac{e-o}{o}$\\
+  \midrule                                                                                                
+  
+  \textbf{Sort PCM-Oblivious} &  $856 \times 10^6$ & $934.4 \times 10^6$ & -0.08\\ 
+    \textbf{Sort PCM-Conscious} &  $428 \times 10^6$ & $441.8 \times 10^6$ & -0.03\\ 
+  \textbf{Hash Join PCM-Oblivious} &  $ 2.4 \times 10^6$ &$3.6 \times 10^6$ & -0.33\\ 
+  \textbf{Hash Join PCM-Conscious} &  $1 \times 10^6$ & $1.28 \times 10^6$ & -0.22\\ 
+  \textbf{Group-By PCM-Oblivious} &  $9.4 \times 10^6$ & $5.44 \times 10^6$ & 0.73\\ 
+  \textbf{Group-By PCM-Conscious} &  $1.83 \times 10^6$ &$1.44 \times 10^6$ & 0.27\\ 
+  
+  \bottomrule                                                                                             
+  \end{tabular}                                                                                           
+  \end{small}                                                                                             
+  \end{table} 
+  
+\subsubsection{Group-By}
+The values of the parameters $N_R$, $L_R$, $P$, $G$ and $size_g$ for Q16
+are $119056$, $48$, $4$, $18341$ and $48$, respectively.  The observed
+writes for group-by for the PCM-oblivious algorithm was $1.36 \times 10^6$
+words $= 5.44 \times 10^6$ bytes. Using Equation~\ref{eq:gby_conv_sort}
+and replacing the parameter values, we get: 
+
+\begin{dmath}
+\begin{small}
+W_{gb\_conv\_sort}(bytes) = N_RL_R (0.5 \lceil log_2(\frac{N_R L_R}{D}) \rceil + 1) + G \times size_g \\
+\hspace*{90}= 119056 \times 48  (0.5 \lceil log_2(\frac{119056 \times 48}{4 \times 10^6}) \rceil + 1) + 18341 \times 48  
+\approx 9.4 \times 10^6
+\end{small}
+\end{dmath}
+
+Now, for the PCM-conscious version, which uses pointer-based hash grouping,
+using Equation \ref{eq:gby_ptr_hash} results in:
+
+\begin{dmath}
+\begin{small}
+W_{gb\_ptr\_hash}(bytes) = 2N_R \times P + G \times size_g
+= 2 \times 119056\times 4 + 18341 \times 48
+= 1.83 \times 10^6 
+\end{small}
+\end{dmath}
+
+This closely corresponds to the observed writes of $0.36 \times 10^6$ words $= 1.44 \times 10^6$ bytes.
+
+
+
+
+A summary of the above results is provided in
+Table~\ref{tab:estimator_validation}. It is clear that our estimators
+predict the write cardinality with a reasonable degree of accuracy for both the
+PCM-oblivious and PCM-conscious algorithm, making them suitable for
+incorporation in the query optimizer.
+
+
+
+\end{appendix}

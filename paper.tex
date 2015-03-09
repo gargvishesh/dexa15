@@ -1,0 +1,120 @@
+% This is LLNCS.DOC the documentation file of
+% the LaTeX2e class from Springer-Verlag
+% for Lecture Notes in Computer Science, version 2.4
+\documentclass{llncs}
+\usepackage{llncsdoc}
+
+\usepackage{graphicx}
+%\usepackage{balance}  % for  \balance command ON LAST PAGE  (only there!)
+\usepackage{times,amsmath,epsfig,booktabs}
+\usepackage[hyphens]{url}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+%\usepackage{multirow}
+\usepackage{listing}
+\usepackage{amssymb}
+\usepackage{pifont}
+\usepackage{verbatim}
+%\usepackage{comment}
+\usepackage{subfig}
+\usepackage{tikz}
+\usepackage{listings}
+
+\usepackage{xcolor,colortbl}
+
+%Space saving packages
+\usepackage{times}
+%\usepackage[small,compact]{titlesec}
+%\usepackage[small,it]{caption}
+
+
+
+\newcommand{\model}{DRAM\_HARD}
+\newcommand{\modelExplicit}{DRAM\_SOFT}
+\newcommand{\modelPcmRam}{PCM\_RAM}
+
+%\newcommand{\jhcomment}[1]{\noindent {\bf \\JH: #1 \\}}
+\newcommand{\jhcomment}[1]{}
+
+\definecolor{c1}{RGB}{239,247,245}
+\definecolor{c2}{RGB}{188,189,220}
+\definecolor{c3}{RGB}{117,107,177}
+\newcolumntype{x}{>{\columncolor{c1}}c}
+\newcolumntype{y}{>{\columncolor{c2}}c}
+\newcolumntype{z}{>{\columncolor{c3}}c}
+%
+\begin{document}
+
+\title{
+On Improving Write Performance in PCM Databases}
+
+% Three authors sharing the same affiliation.
+\author{Vishesh Garg, Abhimanyu Singh, and Jayant R. Haritsa}
+%
+      \institute {Database Systems Lab, SERC/CSA\\
+       Indian Institute of Science, Bangalore, INDIA\\
+       \textbf{\email{\{vishesh, abhimanyu, haritsa\}@dsl.serc.iisc.ernet.in}}
+       }
+          
+          
+\maketitle
+%\markboth{\LaTeXe{} Class for Lecture Notes in Computer
+%Science}{\LaTeXe{} Class for Lecture Notes in Computer Science}
+%\thispagestyle{empty}
+%\begin{flushleft}
+%\LARGE\bfseries Instructions for Authors\\
+%Coding with \LaTeX\\[2cm]
+%\end{flushleft}
+%\rule{\textwidth}{1pt}
+%\vspace{2pt}
+%\begin{flushright}
+%\Huge
+%\begin{tabular}{@{}l}
+%\LaTeXe{} Class\\
+%for Lecture Notes\\
+%in Computer Science\\[6pt]
+%{\Large Version 2.4}
+%\end{tabular}
+%\end{flushright}
+%\rule{\textwidth}{1pt}
+%\vfill
+%\begin{flushleft}
+%\large\itshape
+%\begin{tabular}{@{}l}
+%{\Large\upshape\bfseries Springer}\\[8pt]
+%Berlin\enspace Heidelberg\enspace New\kern0.1em York\\[5pt]
+%Barcelona\enspace Budapest\enspace Hong\kern0.2em Kong\\[5pt]
+%London\enspace Milan\enspace Paris\enspace\\[5pt]
+%Santa\kern0.2em Clara\enspace Singapore\enspace Tokyo
+%\end{tabular}
+%\end{flushleft}
+%
+
+%
+\input{abstract}
+
+\input{intro}
+
+\input{framework}
+
+\input{sort}
+
+\input{join}
+
+\input{groupby}
+
+\input{expts}
+
+\input{discussion}
+
+\input{relwork}
+
+\input{conc}
+
+
+\bibliographystyle{abbrv}
+\bibliography{sigproc}
+
+\input{appendix}
+
+\end{document}
