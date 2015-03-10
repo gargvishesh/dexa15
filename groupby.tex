@@ -105,7 +105,7 @@ is the aggregated tuples that are finally passed on to the next operator
 in the plan tree. Hence, we can modify the multi-pivot quicksort of
 Section~\ref{subsec:sort_mpivot} to use \emph{pointers} in both the
 \textit{Swap} and \textit{Sort} phases, subsequently leveraging these
-pointers to perform aggregation on the sorted tuples.
+pointers to perform aggregation on the sorted tuples. 
 
 \textbf{PCM write analysis}: The full tuple writes of $2 N_R L_R$
 which were incurred in the multi-pivot quicksort scheme, are

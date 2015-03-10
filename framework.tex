@@ -5,7 +5,8 @@ in our analysis, and the notations used in the sequel.
 
 As mentioned in the Introduction, we model the \model{} memory
 organization (Figure~\ref{fig:pcm_models} (c)). The DRAM buffer is of
-size $D$ and is organized in a \emph{K-way set-associative} manner, like the higher level cache memories.
+size $D$ and is organized in a \emph{K-way set-associative} manner, like the higher level cache memories. Moreover, its operation is also identical to that of an \emph{inclusive} cache in the memory hierarchy; fetching a new DRAM line (256B in our experimental setup) from PCM each time there is a DRAM miss. The last level cache in turn fetches its data from the DRAM buffer.
+
 A \textit{data-comparison write (DCW)} scheme \cite{write} is used for
 the writing of PCM memory blocks during eviction from DRAM -- in this
 scheme, the memory controller compares the existing PCM block to the newly

@@ -7,25 +7,32 @@ implementations. That is, while the execution engine was PCM-conscious,
 the presence of PCM was completely \emph{opaque} to the optimizer.
 Given the read-write asymmetry of PCM in terms of both latency and wear
 factor, it is possible that alternative plans, capable of providing better
-performance profiles, may exist in the plan search space.  To discover
+performance profiles, may exist in the plan search space. To discover
 such plans, the database query optimizer needs to incorporate PCM
 awareness in both the operator cost models and the plan enumeration
 algorithms.
 
-We introduced a new metric of \emph{writes} in the operator cost model using the estimators described in Sections~\ref{sort} to \ref{gby}. The existing latency based cost models of the operators were also revised to account for the additional latency incurred during writes. The query optimizer is redesigned to now allow the user to input a new parameter which we call the \emph{slack} denoted by $\lambda$. The slack represents the maximum relative slowdown, compared to the least response time query plan, that is acceptable to the user in lieu of getting better write performance. The optimizer then examines all the plans which fall under this $\lambda$ window and returns the least writes incurring plan.
+We introduce a new metric of \emph{write cost} in the operator cost model, representing the incurred writes for a plan, using the estimators described in Sections~\ref{sort} to \ref{gby}. The existing latency based cost models of the operators are also revised to account for the additional latency incurred during writes. We henceforth refer to the write cost and the latency cost of a plan as WC and LC respectively. 
 
-Since we can no longer discard a plan just on the basis of latency cost, the plan enumeration process of the optimizer was modified to now propagate the the entire list of plans at each operator node up the plan tree. At the root, the optimizer exercises its maximum slack limit to come up with the least writes plan.
+We redesign the query optimizer to now allow the user to input a new parameter which we call the \emph{slack} denoted by $\lambda$. The slack represents the maximum relative slowdown, compared to the LC-optimal query plan, that is acceptable to the user in lieu of getting better write performance. That is, if the LC of the LC-optimal execution plan $P_o$ is $c_o$ and the LC of an alternate plan $P_i$ is $c_i$, the user is willing to accept $P_i$ as the final execution plan if $c_i \le \lambda c_o$. The optimizer then examines these additional plans $P_i$ falling under the $\lambda$ window and returns the WC-optimal plan \emph{within} this set.
+
+During the plan enumeration process in the planning phase, the native optimizer propagates just the LC-optimal (and interesting order) plans through the internal nodes of the dynamic programming (DP) lattice. This leaves little room for WC-optimal plan selection at the root node. On the other hand, if we were to propagate the \emph{entire} list of sub-plans at each internal node, and do the $\lambda$ check only at the root node, we would end up with an exponential search space. 
+
+To tackle this situation, we use a heuristic local pruning mechanism at each internal node that discards only those plans whose LC significantly exceeds that of the LC-optimal plan at that node. In order to accomplish this, we use a new algorithmic parameter \emph{local slack} $\lambda_l$ ($\ge\lambda$) which acts as a local slowdown threshold at each internal node. Thus, each local sub-plan $P_i^'$ with LC $c_i^'$ is compared to the local LC-optimal sub-plan $P_o^'$ with LC $c_o^'$, and $P_i^'$ is discarded if $c_i^{'} > \lambda_l c_o^'$. At the root, the optimizer exercises its original slack limit $\lambda$ to come up with the least writes plan, using associated WC values. This is similar in flavour to what is done in \cite{expand} where the objective is to find a stable plan.  
 
 In the light of these modifications, let
 us revisit Query Q13, for which the default plan was shown in
-Figure~\ref{fig:plan_trees}(a). With a slack value of 0 indicating no slack being allowed, we got a new execution plan wherein the
+Figure~\ref{fig:plan_trees}(a). In our experiments, the value of $\lambda_l$ was set equal to $\lambda$. With the $\lambda$ value of 0 indicating no slack being allowed, we got a new execution plan wherein the
 merge left join between the \textit{customer} and \textit{orders}
-tables is replaced by a hash left join.  The relative performance of
+tables is replaced by a hash left join. The reason for this switch is that, in the original non-PCM paradigm, the plan performing a left merge-join using the index on the \textit{customer} table tuples, after sorting \textit{orders} table tuples on \textit{o\_custkey} attribute, incurred the least latency. In the PCM paradigm however, the additional latency incurred due to writes during sorting meant that an alternate plan that builds a hash table on the \textit{orders} table is a faster alternative. 
+
+The relative performance of
 these two alternatives with regard to PCM Writes and Cycles, are shown
 in Figures~\ref{fig:perf_comp}(a) and (b), respectively. We observe
 here that there is a \emph{huge difference} in both the query response times as well as writes overheads for both the plans.
 Specifically, the alternative plan reduces the writes by well over an
 order of magnitude!
+As we gradually increased the value of slack, we didn't notice any change in plans. When the slack was made to be as high as 12000, we observed that the hash left join gave way to nested loop left join, clearly indicating that  it gives write savings at a humongous latency cost.
 
 
 \begin{figure}[htbp]
@@ -38,14 +45,14 @@ order of magnitude!
 \subfloat[Overall performance comparison]{
 \begin{small}
 
-  \begin{tabular}{p{2cm}p{2cm}p{2cm}p{2cm}}
+  \begin{tabular}{p{2cm}p{2cm}p{2cm}p{2cm}p{2cm}}
   \toprule                                                                                                
   
-  \textbf{Metric} & \textbf{Opt(PCM-O) Exec(PCM-O) } & \textbf{Opt(PCM-O) Exec(PCM-C)} & \textbf{Opt(PCM-C) Exec(PCM-C)}\\
+  \textbf{Metric} & \textbf{Opt(PCM-O) Exec(PCM-O) } & \textbf{Opt(PCM-O) Exec(PCM-C)} & \textbf{Opt(PCM-C) Exec(PCM-C)} & \textbf{Opt(PCM-C) Exec(PCM-O)}\\
   \midrule                                                                                                
   
-  \textbf{Writes(words)} &  $233.6 \times 10^6$ & $110.6 \times 10^6$ & $4.66 \times 10^6$\\ 
-  \textbf{Cycles} &  $13.1 \times 10^9$ & $10.4 \times 10^9$ & $3.2 \times 10^9$\\ 
+  \textbf{Writes(words)} &  $233.6 \times 10^6$ & $110.6 \times 10^6$ & $4.66 \times 10^6$ & $12.8 \times 10^6$\\ 
+  \textbf{Cycles} &  $13.1 \times 10^9$ & $10.4 \times 10^9$ & $3.2 \times 10^9$ & $4.5 \times 10^9$\\ 
   \bottomrule                                                                                             
   \end{tabular}                                                                                           
 \end{small}                                                                                           
@@ -54,14 +61,12 @@ order of magnitude!
 \label{fig:perf_comp}
 \end{figure}
 
-As we gradually increased the value of $\lambda$, we didn't notice any change in plans. When the $\lambda$ value was put as high as 12000, we observed that the hash left join gave way to nested loop join, clearly indicating the humongous latency cost associated with it despite its write savings.
+
 
 To put matters into perspective, Figure~\ref{fig:perf_comp}(b) summarizes
 the relative performance benefits obtained as the database layers are
 gradually made PCM-conscious (in the figure, the labels Opt and Exec refer to Optimizer and Executor, respectively, while PCM-O and PCM-C
-refer to PCM-Oblivious and PCM-Conscious, respectively). 
-
-The results clearly indicate that future query optimizers for PCM-based architectures need to incorporate these dual metrics of \emph{writes} and \emph{time} in order to decide the most suitable plan for executing a given query.
+refer to PCM-Oblivious and PCM-Conscious, respectively). For the sake of completeness, we have also added results for the case when the Optimizer is PCM-C but the executor is PCM-O (last column). The results clearly indicate that future query optimizers for PCM-based architectures need to incorporate PCM-Consciousness at \emph{both} the Optimizer and the Executor level in order to get the best performance while executing a given query.
 
 
 

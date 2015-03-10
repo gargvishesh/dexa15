@@ -10,28 +10,28 @@
 	\State curPartitionCorrect = getPartition(array[i])
      \If {i between partitionStart[curPartitionCorrect] and  partitionStart[curPartitionCorrect+1]}                
      \State nextUnresolvedIndex[curPartitionCorrect] = i+1
-	\State continue;
+	\State continue
      \Else
      		\State firstCandidateLoc = i
 			\State presentCandidate = array[i]             
-            \State flag = 1;
+            \State flag = 1
             \While {flag} 
-                \State targetPartitionStart = nextUnresolvedIndex[curPartitionCorrect];
-                \State targetPartitionEnd = partitionStart[curPartitionCorrect + 1];
+                \State targetPartitionStart = nextUnresolvedIndex[curPartitionCorrect]
+                \State targetPartitionEnd = partitionStart[curPartitionCorrect + 1]
                 \For {k=targetPartitionStart to targetPartitionEnd} 
-                \State nextPartitionCorrect = getPartition(array[i]);
+                \State nextPartitionCorrect = getPartition(array[i])
                     \If {k between partitionStart[nextPartitionCorrect]                       and 
                     \State partitionStart[nextPartitionCorrect + 1]}
-                        \State continue;
+                        \State continue
                         
                     \ElsIf {k == firstCandidateLoc} 
-                        \State flag = 0; \Comment Indicates it is a cycle
+                        \State flag = 0 \Comment Indicates it is a cycle
                     \EndIf
-                    \State swap(presentCandidate, array[k]);
-                    \State nextUnresolvedIndex[curPartitionCorrect] = k+1;
+                    \State swap(presentCandidate, array[k])
+                    \State nextUnresolvedIndex[curPartitionCorrect] = k+1
                     \State curPartitionCorrect = nextPartitionCorrect
                     
-                    \State break;
+                    \State break
              
 				\EndFor
 			\EndWhile
