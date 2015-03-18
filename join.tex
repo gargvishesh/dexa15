@@ -7,14 +7,6 @@ in the join column. Since we assume the table is completely PCM-resident, the jo
 writes will be incurred during the building of the hash table, and also
 during the writing of the join results.
 
-In the following subsections, we first discuss the conventional hash table
-construction, followed by our PCM-conscious modifications. We assume $size_{entry}$
-to be the hash table entry size for each tuple of the build relation.
-Further, if the result of the join is $J$ join tuples, each of size
-$size_{j}$, then the total \emph{output} writes, which is common to all
-algorithms, would be $J \times size_{j}$. We ignore the writes incurred while initializing each hash table bucket since they are negligible in comparison to inserting the actual entries.
-
-\subsection{Conventional hash table}
 Each entry in the hash table consists of a pointer to the corresponding
 build tuple and the hash value for the join column. Due to the
 absence of prior knowledge about the distribution of join column values
@@ -24,27 +16,14 @@ allocated and is connected to existing entries using a pointer. Thus,
 such an approach incurs an additional pointer write each time a new
 entry is inserted.
 
-\textbf{PCM write analysis}: 
-For each new entry, there would typically be a pointer write (of size $P$ bytes),
-apart from the $size_{entry}$ bytes for the entry itself.  Thus the total writes 
-for conventional hash table is given by
-\begin{equation}\label{eq:ht_conv}
-  W_{ht\_conv} = N_R \times (size_{entry} + P) + J \times size_{j}
-\end{equation}
-
-\subsection{PCM-conscious hash table}
-We now move on to discussing hash table construction optimizations that
-can reduce the number of PCM writes.
-
-\subsubsection{Bitmapped page based allocation}
-Our first improvement is to allocate space to hash buckets in units of
-fixed size called \textit{pages}. A page contains a set of contiguous
+Our first proposal is to allocate space to hash buckets in units of
+fixed size called \textit{pages} \cite{paging}. A page contains a set of contiguous
 entries, the maximum count of entries being fixed depending on the size
 of the page and the size of the entry. When a page overflows a new page
 is allocated and linked to the overflowing page via a pointer.  Thus,
 unlike the conventional hash table wherein each \emph{pair} of entries
 are connected using pointers, the interconnecting pointer here is only
-at page granularity. Note that although using open-addressing is another method of avoiding pointers, probing for a join attribute value would have to search through the entire table each time. This is because the inner table might contain multiple tuples with the same join attribute value and thus the probe cannot terminate without looking at the entire hash table.   
+at page granularity. Note that although open-addressing is another alternative for avoiding pointers, probing for a join attribute value would have to search through the entire table each time; since the inner table might contain \emph{multiple} tuples with the same join attribute value.
 
 A control bitmap is used to indicate whether each entry in a page is vacant
 or occupied, a necessary information during both insertion and search in the
@@ -53,15 +32,6 @@ to the bucket. Though such an approach  may lead to space wastage when
 some of the pages are not fully occupied, we save on the numerous pointer
 writes that are incurred when space is allocated on a per-entry basis.
 
-\textbf{PCM write analysis}: Assuming there are $E_{page}$ entries per page, there would now be one pointer per $E_{page}$ entries. Additionally, for each insertion, a bit write would be incurred due to the bitmap update. In such a case, the writes would be 
-$$W_{ht\_bitmapped} = N_R \times (size_{entry} +  \frac{P}{E_{page}} + \frac{1}{8} ) + J \times size_{j}$$\\
-Since in practice both  $\dfrac{P}{E_{page}}$ and $\dfrac{1}{8}$ are small as compared to $size_{entry}$, 
-\begin{equation}\label{eq:ht_bmp}
- W_{ht\_bitmapped} \approx N_R \times size_{entry} + J \times size_{j} 
-\end{equation} 
-
-
-\subsubsection{Reducing hash value length}
 We can reduce the writes incurred due to storing of the hash values in
 the hash table by restricting the length to just a single byte. In this
 manner, we trade-off precision for fewer writes. If the hash function
@@ -72,12 +42,9 @@ to each bucket turn out to be less than this value. Otherwise, we would
 have to incur the penalty (in terms of latency) of reading the actual join
 column values from PCM due to the possibility of false positives.
 
-\textbf{PCM write analysis}: Let us assume the original hash value
-was four bytes long. Using a single byte hash value instead, combined
-with a bitmapped page based hash table, leads to the total writes of
-$W_{ht\_pcm}$ being given by
-\begin{equation}\label{eq:ht_pcm}
-W_{ht\_pcm} = N_R \times (size_{entry} - 3)+ J \times size_{j}
-\end{equation}
-	
-
+\textbf{PCM write analysis}: We ignore the writes incurred while initializing each hash table bucket since they are negligible in comparison to inserting the actual entries. $J \times size_j$ represents the writes due to join tuples. Assuming there are $E_{page}$ entries per page, there would now be one pointer per $E_{page}$ entries. Additionally, for each insertion, a bit write would be incurred due to the bitmap update. In such a case, the writes would be 
+$$W_{hj} = N_R \times (size_{entry} +  \frac{P}{E_{page}} + \frac{1}{8} ) + J \times size_{j}$$\\
+Since in practice both  $\dfrac{P}{E_{page}}$ and $\dfrac{1}{8}$ are small as compared to $size_{entry}$, 
+\begin{equation}\label{eq:ht_bmp}
+ W_{hj} \approx N_R \times size_{entry} + J \times size_{j} 
+\end{equation} 

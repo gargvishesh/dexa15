@@ -106,7 +106,7 @@ the OS stack.} simulator that can model a multithreaded, multicore,
 superscalar x86 CPU and an AMD Evergreen GPU. It has support for both
 functional simulation and cycle-accurate detailed architecture simulation.
 
-We evaluated our algorithms on Multi2sim in cycle-accurate simulation
+We evaluated the algorithms on Multi2sim in cycle-accurate simulation
 mode. Since it does not have native support for PCM, we made a major
 extension to its existing memory module to model PCM memory. Specifically,
 the following enhancements were incorporated in the simulator to conduct
@@ -189,6 +189,7 @@ simulator running times are not impractically long. However, we have been
 careful to ensure that the \emph{ratios} between the sizes of adjacent
 levels in the hierarchy are maintained as per the original configurations
 in \cite{wear}.  
+
 \begin{comment}
 Further, note that the read-to-write latency ratio is
 1:4, significantly lower than the 1:20 of Table ~\ref{tab:tab_pcm_char}
@@ -202,8 +203,8 @@ threads/processes, we restricted our experiments to a single process with
 a single thread of execution. This choice ensured that the entire private
 DRAM was available to the executing query. The effect of reduced DRAM
 availability due to multiple programs running in parallel was \emph{inferred}
-by conducting additional experiments with reduced DRAM sizes, and 
-these results are presented in the Appendix.
+by conducting additional experiments with reduced DRAM sizes. The write estimators were also validated by comparing them with the actual writes incurred during query executions. Both 
+these results are covered in the Tech Report \textbf{[Citation to be included]}.
 \begin{figure*}[htpb]
 \centering
 \subfloat[Q13]{
@@ -356,7 +357,6 @@ We measured the following performance metrics for each of the queries:
 \begin{description}
 \item [PCM Writes:] This is the total number of word (4B) updates that are applied to the PCM memory during
 the query execution.
-\jhcomment{important to write correctly}
 \item [CPU Cycles:] This is the total number of CPU cycles requires to execute the query to completion.
 \item [Wear Distribution:] This is the frequency of writes measured on a per-256B-block basis.
 \end{description}
@@ -526,8 +526,88 @@ native systems as compared to the PCM-conscious processing. This
 conclusively demonstrates that the improvement is with regard to
 \emph{both} average case and worst case behavior.
 
-
 \begin{comment}
+
+\subsection{Validating Write Estimators}
+\label{validation}
+
+We now move on to validating the estimators
+(presented in Section~\ref{sort} through \ref{gby})  for the number of
+writes incurred by the various database operators.
+
+\subsubsection{Sort}
+The size of the $orders$ table is approximately $214 \times 10^6$ bytes. 
+The PCM-conscious version used multi-pivot sort algorithm and
+incurred writes of $110.6 \times 10^6$ words $= 441.8 \times 10^6 $
+bytes. Replacing the values for $N_R L_R$ in Equation \ref{eq:mpivot},
+we get the writes as 
+\begin{small}
+$$W_{mpivot}(bytes) \approx 2 \times 214 \times
+10^6  = 428 \times 10^6 $$ 
+\end{small}
+Thus the estimates are close to the
+observed writes.
+
+
+
+\subsubsection{Hash Join}
+For the hash join in Q19, the values of $N_R$, $size_{entry}$, $J$,
+$size_{j}$ are $2 \times 10^5$, $8$, $120$ and $8$, respectively. 
+For the PCM-conscious version, the estimated writes are given by Equation \ref{eq:ht_pcm},
+and substituting  the  parameter values, the writes are given by:  
+\begin{small}
+$$W_{ht\_pcm}(bytes) = 2 \times 10^5 (8-3) + 120 \times 8 \approx 10^6$$
+\end{small}
+which is close to the actual writes of $0.32 \times 10^6$ words $=
+1.28 \times 10^6$ bytes.
+
+\begin{table}[!h]                                                                                       
+\centering                                                                                              
+\caption{Validation of Write Estimators}
+  \label{tab:estimator_validation}                                                                                
+  %\centering                                                                                             
+  \begin{small}                                                                                           
+  \begin{tabular}{p{5cm}p{2cm}p{2cm}p{1cm}}
+  \toprule                                                                                                
+  
+  \textbf{Operator} & \textbf{Estimated Writes} (e) & \textbf{Observed Writes} (o) & \textbf{Error Factor} $\frac{e-o}{o}$\\
+  \midrule                                                                                                
+  
+    \textbf{Sort PCM-Conscious} &  $428 \times 10^6$ & $441.8 \times 10^6$ & -0.03\\ 
+  \textbf{Hash Join PCM-Conscious} &  $1 \times 10^6$ & $1.28 \times 10^6$ & -0.22\\ 
+  \textbf{Group-By PCM-Conscious} &  $1.83 \times 10^6$ &$1.44 \times 10^6$ & 0.27\\ 
+  
+  \bottomrule                                                                                             
+  \end{tabular}                                                                                           
+  \end{small}                                                                                             
+  \end{table} 
+  
+\subsubsection{Group-By}
+The values of the parameters $N_R$, $L_R$, $P$, $G$ and $size_g$ for Q16
+are $119056$, $48$, $4$, $18341$ and $48$, respectively.  
+Now, for the PCM-conscious version, which uses pointer-based hash grouping,
+using Equation \ref{eq:gby_ptr_hash} results in:
+
+\begin{dmath}
+\begin{small}
+W_{gb\_ptr\_hash}(bytes) = 2N_R \times P + G \times size_g
+= 2 \times 119056\times 4 + 18341 \times 48
+= 1.83 \times 10^6 
+\end{small}
+\end{dmath}
+
+This closely corresponds to the observed writes of $0.36 \times 10^6$ words $= 1.44 \times 10^6$ bytes.
+
+
+
+
+A summary of the above results is provided in
+Table~\ref{tab:estimator_validation}. It is clear that our estimators
+predict the write cardinality with a reasonable degree of accuracy for PCM-conscious algorithm, making them suitable for
+incorporation in the query optimizer.
+
+
+
 Note that it is possible to achieve this lifetime only when the writes
 are perfectly levelled across the entire PCM. In practice, however,
 there is a degree of skewness in the writes of most algorithms. Due to
@@ -547,11 +627,11 @@ when the bitmap used for maintaining the slot occupancy information for
 pages in the hash table is evicted intermediately between bit updates,
 thereby incurring higher number of writes for that line.
 
-For group-by (using sort), the per block writes due to our algorithms
+For group-by (using sort), the per block writes due to modified algorithms
 are consistently lower than the native algorithms by about $39\%$. The
 reason for this is that sorting incurs multiple writes for the same
 block when all the input tuples cannot fit in DRAM, which the aspect of
-partitioning saves in our PCM-conscious algorithms.
+partitioning saves in the PCM-conscious algorithms.
 
 \begin{figure}[htbp]
 	\psfig{figure=wear_dist.png, width = 9cm}\centering

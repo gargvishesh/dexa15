@@ -16,14 +16,16 @@
 \usepackage{pifont}
 \usepackage{verbatim}
 %\usepackage{comment}
-\usepackage{subfig}
+%\usepackage{subfig}
 \usepackage{tikz}
 \usepackage{listings}
 
 \usepackage{xcolor,colortbl}
 
-%Space saving packages
+%Hacks to save space
 \usepackage{times}
+\def\baselinestretch{0.98} 
+\usepackage[font={small}]{caption, subfig}
 %\usepackage[small,compact]{titlesec}
 %\usepackage[small,it]{caption}
 
@@ -46,8 +48,11 @@
 \begin{document}
 
 \title{
+\vspace*{-0.5in}
+{\large \bf \hfill
+\underline{Second Draft / \today}} \\
+\vspace*{0.1in} 
 On Improving Write Performance in PCM Databases}
-
 % Three authors sharing the same affiliation.
 \author{Vishesh Garg, Abhimanyu Singh, and Jayant R. Haritsa}
 %
@@ -107,12 +112,13 @@ On Improving Write Performance in PCM Databases}
 
 \input{discussion}
 
-\input{relwork}
+%\input{relwork}
 
 \input{conc}
 
 
 \bibliographystyle{abbrv}
+
 \bibliography{sigproc}
 
 \input{appendix}

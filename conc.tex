@@ -1,4 +1,4 @@
-\section{Conclusion and Future Work}
+\section{Conclusion}
 \label{conclusion}
 Designing database query execution algorithms for PCM platforms
 requires a change in perspective from the traditional assumptions of
@@ -17,18 +17,3 @@ cycle-accurate nature of the simulator makes it likely that similar
 performance will be exhibited in the real world as well. Moreover,
 our write estimators facilitate the incorporation of these algorithms
 in the query optimizer, as we have shown in our implementation.
-
-Energy consumption is a major concern today in data centres since it directly relates to cost. We would therefore like to have a fresh look at optimizer design with respect to a revised metric \emph{performance/watt}. Given the major energy savings obtained from a PCM based hardware, the user might be willing to trade-off latency not only for the sake of writes but for the additional benefit of saving power cost. We see this as an interesting line of future work.
-
-\begin{comment}
-Even within the class of PCM conscious algorithms, there exist myriad
-algorithm design choices offering varying degrees of writes and running
-time. Nested loops join, for example, would incur the least amount of
-writes for join when both relations fit in PCM, but might prove to be
-extremely slow. We need to come up with metrics that can quantify this
-trade-off based upon some measure of the lifetime that the PCM memory
-module is expected to serve and the maximum delay the user is willing to
-bear. These metrics too need to be integrated with the query optimizer
-for it to make suitable plan choices for PCM based hardware. We see this
-as an interesting line of future work.
-\end{comment}

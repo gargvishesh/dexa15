@@ -10,15 +10,10 @@ on the operators following later in the plan tree.
 In the following subsections, we begin by considering the hash-based
 group-by operator and present our modifications of this technique for
 the PCM environment. Subsequently, we move on to a similar discussion
-for sort-based group-by implementations.
-
-Note that if we assume the result of the group-by to be $G$ tuples,
-each of $size_g$, then the total \emph{output} writes, which is common
-to all algorithms, would be $G \times size_g$.
+for sort-based group-by implementation. In both these algorithms, the writes due to \emph{output} tuples, is $G \times size_g$.
 
 \subsection{Hash Based Grouping}
 
-\subsubsection{Conventional group-by}
 A hash table entry for group-by, as compared to the corresponding
 entry in hash join, has an additional field containing the aggregate
 value. For each new tuple in the input array, a bucket index is
@@ -30,23 +25,6 @@ bucket. Thus, unlike hash join, where each build tuple had its individual
 entry, here the grouped tuples share a common entry with an aggregate
 field that is constantly updated over the course of the algorithm.
 
-\textbf{PCM write analysis}: The number of separate entries in the
-hash table is $G$, incurring $G \times size_{entry}$ writes. If
-$size_{agg\_field}$ represents the size of the aggregate field
-during grouping, the writes due to each update of the aggregate would be $N_R \times
-size_{agg\_field}$. This
-would give the total number of writes as:
-\begin{equation}
-\label{eq:gby_conv_ht}
-\begin{split}
-W_{gb\_conv\_ht} = G \times (size_{entry} + P) + \\
-N_R \times size_{agg\_field} + G \times size_g
-\end{split}
-\end{equation}
-
-\jhcomment{Again worst case! Discuss!}
-
-\subsubsection{PCM-conscious group-by}
 Since the hash table construction for group-by is identical to that
 of the hash-join operator, the PCM-related modifications described
 in Section~\ref{hj} can be applied here as well. That is, we employ
@@ -57,7 +35,7 @@ to reduce the writes to PCM.
 that the total writes incurred for the PCM-conscious is given by
 \begin{equation}
 \begin{split}
-W_{gb\_opt\_ht} = G \times (size_{entry} - 3) + \\
+W_{gb\_ht} = G \times size_{entry} + 
 N_R \times size_{agg\_field} + G \times size_g
 \end{split}
 \end{equation}
@@ -70,111 +48,20 @@ tree. Another use case is for queries with a \textit{distinct} clause
 in the aggregate expression, in order to identify the duplicates that have
 to be discarded from the aggregate.  
 
-\begin{comment}
-A sample case in point is the following SQL query: \\
-\begin{small}
-\hspace*{0.5in}	{\sf select o.customer, count(distinct(o.orderID))} \\
-\hspace*{0.5in}	{\sf from orders as o}  \\
-\hspace*{0.5in}	{\sf group by o.customer}
-\end{small}
-\end{comment}
-
-
-\begin{comment}
-Sorting thus is a commonly used technique for grouping but it incurs
-its corresponding large number of writes.
-In such a case, we can now no longer simply update the aggregate values in the hash table for group-by since the existence of duplicates needs to be checked in parallel. To get past this limitation, query optimisers usually choose to use sorting for aggregation. Since the group of tuples forming each aggregate now reside contiguously in the sorted list, duplicates can be identified easily and eliminated, while performing the aggregation.
-\end{comment}
-
-
-\subsubsection{Conventional group-by}
-\textbf{PCM write analysis}: For sort-based grouping, the writes would
-be akin to those incurred for sorting. Thus, following the same analysis
-as in Equation \ref{eq:sort_conv}, the total writes would be:
-\begin{equation}
-\label{eq:gby_conv_sort}
-W_{gb\_conv\_sort} = N_RL_R (0.5 \lceil log_2(\frac{N_R L_R}{D}) \rceil + 1) + G \times size_g
-\end{equation}	
-
-
-\subsubsection{PCM-conscious ordered group-by}
-\label{subsec:gb_ptr_mpivot} 
-Sorting based group-by differs in a key aspect from conventional sorting
+Sorting based group-by differs in a key aspect from sorting itself
 in that that the sorted tuples do not have to be written out. Instead, it
 is the aggregated tuples that are finally passed on to the next operator
-in the plan tree. Hence, we can modify the multi-pivot quicksort of
-Section~\ref{subsec:sort_mpivot} to use \emph{pointers} in both the
-\textit{Swap} and \textit{Sort} phases, subsequently leveraging these
+in the plan tree. Hence, we can modify the flashsort algorithm of
+Section~\ref{sort} to use \emph{pointers} in both the
+\textit{Permutation} and \textit{Short-range ordering} phases, subsequently leveraging these
 pointers to perform aggregation on the sorted tuples. 
 
 \textbf{PCM write analysis}: The full tuple writes of $2 N_R L_R$
-which were incurred in the multi-pivot quicksort scheme, are
+which were incurred in the flashsort scheme, are
 now replaced by $2N_R \times P$ since pointers are used during
 both the partitioning and sorting phases. Thus, the total writes for this
 algorithm would be:
 \begin{equation}
 \label{eq:gby_ptr_mpivot}
-W_{gb\_ptr\_mpivot} = 2N_R \times P + G \times size_g
+W_{gb\_sort} = 2N_R \times P + G \times size_g
 \end{equation}
-
-\subsubsection{PCM-conscious distinct group-by}
-\begin{algorithm}[h!]
-\caption{PCM-conscious distinct grouping}
-\label{alg:hash_based_pcm_partition}
-\begin{algorithmic}[1]
-\State $ p = c\times \frac{N_R L_R}{D}$;
-\State $ size[] = {0..0}$;   
-\Comment{size of sub-arrays}\\
-\textbf{Read Phase}
-\For {i=$1$ to $N_R$}
-\State partition = hash(array[i]) 
-\State size[partition]++ 
-\EndFor
-\Comment {Time complexity=$N_R$ }
-\State cumulative = 0
-\For {i=$1$ to $p$}
-\State cumulative = cumulative + size[i]
-\State partitionStart[i+1] = cumulative
-\EndFor
-\Comment {Time complexity=$p$}\\
-\textbf{Swap Phase}
-\State Similar to multi-pivot quicksort swap phase presented in Algorithm~\ref{alg:swap_phase} with tuple swapping replaced by pointer-to-tuple swapping, and binary search within pivots replaced by hashing.
-\Comment {Time complexity=$N_R$ }
-\State return partitionStart[];
-\end{algorithmic}
-\end{algorithm} 
-For group-by with the \textit{distinct} clause, the \emph{entire} array
-need not be sorted, the only requirement being that all the members of a
-group be collocated. Therefore, a pivot-based division of the array is no
-longer necessary. Instead, hashing can be used to divide the input tuples
-into DRAM-sized partitions. These partitions are then internally sorted by means
-of pointers, just as in the pointer-based multi-pivot algorithm described above. 
-
-Though this methodology does not reduce the writes as compared to 
-pivot-based partitioning, it helps bring down the time complexity of
-moving the tuples to the right partitions. This is because we do not have
-to perform a binary search within the sorted list of pivots to identify
-the range to which a column value belongs. Instead, a direct
-hash of the column value can determine the correct partition for
-the tuple. The modified partitioning pseudo-code is shown below
-in Algorithm~\ref{alg:hash_based_pcm_partition}.
-
-
-
-As we can see, hash-based partitioning brings down the time complexity
-of both the read phase and the swap phase to $N_R$ from $N_R \times
-log_2p$ while retaining the write efficiency of pointer-based multi-pivot
-quicksort grouping.
-
-
-\textbf{PCM write analysis}: The expected writes are the same as that
-of PCM-conscious ordered grouping (Equation~\ref{eq:gby_ptr_mpivot}), i.e. 
-\begin{equation}
-\label{eq:gby_ptr_hash}
-W_{gb\_ptr\_hash} = 2N_R \times P + G \times size_g
-\end{equation}
-
-
-
-%\subsection*{Unitary increment based Group-by}
-%There can be cases where the Hash Table size is much larger than the DRAM and the group-by aggregate field involves a counter that undergoes unit increments. A sample case in point is the \textit{Count} aggregate function. A simple binary counter can lead to an arbitrary number of writes during intermediate evictions. For e.g., consider a counter having a decimal value of $2$ represented by a 3-bit binary value of $010$. An increment would change it to $011$ incurring a 1 bit write. A subsequent increment however would change it to $100$ leading to 3 bit writes. For such scenarios, we propose counters based on \textit{Gray Codes} \cite{gray_code}. The Gray Code representation between two contiguous count value differs by a single bit. For the previous example, the next gray code value after $011$ will be $111$. Thus, in the case where there is a high probability of each successive count value getting evicted, the writes per eviction would be close to a few bits.

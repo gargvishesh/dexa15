@@ -10,31 +10,11 @@ writes and limited write endurance. Accordingly, recent research
 has investigated how database engines may be redesigned to
 suit DBMS deployments on the new technology.
 
-\begin{comment}
-In this paper, we explore the design of PCM-conscious database operators
-for main memory organizations comprised of PCM augmented with a small
-hardware-controlled DRAM buffer.  Specifically, we present modified
-constructions of the ``workhorse'' database operators: \emph{sort},
-\emph{hash join} and \emph{group-by}, that substantively improve the
-write performance without compromising on execution times. We also
-provide \emph{estimators} of the writes incurred by these techniques,
-thereby facilitating integration with the database query optimizer.
-\end{comment}
-
-In this paper, we explore the design of PCM-conscious database operators
-for main memory organizations comprised of PCM augmented with a small
-hardware-controlled DRAM buffer. Specifically, we present modified
-constructions of the ``workhorse'' database operators: \emph{sort},
-\emph{hash join} and \emph{group-by}, which use existing but overlooked ``off-the-shelf'' algorithms for substantively improving the
-write performance without compromising on execution times. We also
-provide \emph{estimators} of the writes incurred by these techniques,
-thereby facilitating integration with the database query optimizer.
-
-The proposed techniques are implemented on a state-of-the-art
-architectural simulator, which we extend to model PCM, and their
-performance is assessed on a workload of TPC-H benchmark queries. Apart from
-the number of writes and query response times, the algorithms are
-also evaluated on their wear distributions. Our experimental results
+In this paper, we address the pragmatic goal of designing PCM-conscious database operators
+using ``off-the-shelf'' techniques for minimal integration effort with existing systems. Specifically, we target implementations of ``workhorse'' database operators: \emph{sort},
+\emph{hash join} and \emph{group-by} that substantively improve write performance without compromising on execution times. We provide simple but effective \emph{estimators} of the writes incurred by these techniques,
+and use them to redesign the database query optimizer cost model.
+We test these techniques on \emph{end-to-end} TPC-H benchmark queries on writes, latency and wear distributions metrics. Our experimental results
 suggest that the PCM-conscious operators collectively reduce the number
 of writes by a factor of 2 to 3, while concurrently improving the query
 response times by about 20 to 30\%. In essence, our algorithms provide both short-term and
