@@ -12,10 +12,7 @@ the writing of PCM memory blocks during eviction from DRAM -- in this
 scheme, the memory controller compares the existing PCM block to the newly
 evicted DRAM block, and selectively writes back only the modified words.
 Further, \textit{N-Chance}~\cite{nchance} is used as the DRAM eviction
-policy -- here, the first clean way in the $N$ least recently used ways
-(assuming $N$ is less than $K$, the DRAM cache associativity) in a set
-is chosen as the eviction victim. Only when all the $N$ ways are dirty,
-the LRU entry is evicted. We choose this scheme due to its preference
+policy due to its preference
 for evicting non-dirty entries over dirty candidates, thereby saving
 on writes.
 
@@ -39,7 +36,7 @@ the extension to multiple attributes is straightforward.
 A summary of the main notation used in the analysis of the following
 sections is provided in Table~\ref{tab:notations}.
 
-\begin{table}[!h]
+\begin{table}[t]
 \centering
 \caption{Notations Used in Operator Analysis}
 \label{tab:notations}

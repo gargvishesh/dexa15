@@ -41,7 +41,7 @@ DRAM buffer can simply be visualized as yet another level of the existing
 cache hierarchy.  For ease of comparison, these various configurations
 are pictorially shown in Figure~\ref{fig:pcm_models}.
 
-\begin{figure}[htbp]
+\begin{figure}[t]
 	\includegraphics[height=50mm]{PCM_Models.png}\centering
 	\caption{PCM-based Architectural Options}
 	\label{fig:pcm_models}
@@ -60,12 +60,12 @@ mappings for the different memories.
 \subsection*{Our Work}
 We make the following contributions in this paper:
 \begin{itemize}
-\item Propose PCM-conscious off-the-shelf implementations of the ``workhorse'' database operators:
+\item Propose PCM-conscious implementations of the ``workhorse'' database operators:
 \textit{sort}, \textit{hash join} and \textit{group-by}, that are tuned to the \model{} model, that reduce
 \emph{both} query writes and response times.
 
 \item Incorporate major extensions in Multi2sim \cite{multi2sim},
-a state-of-the-art architectural simulator, to support the modelling of PCM.  
+a state-of-the-art architectural simulator, to support the modelling of \model{} configuration of PCM.  
 
 
 
@@ -78,13 +78,13 @@ while saving on writes, can be detrimental to the running times of
 subsequent operators, e.g. join filters, that leverage index ordering. The metric of \emph{wear  distribution} is also included in our evaluation.
 
 
-\item Provide simple but effective mathematical \emph{estimators} for the
-number of writes incurred by the new operators and then incorporate them in the query optimizer's
-cost model.
+\item Provide simple but effective statistical \emph{estimators} for the
+number of writes incurred by the new operators for uniform data distribution scenarios, and incorporate them in the query optimizer's
+cost model. Such an exercise hasn't been carried out in prior literature.
 
 \end{itemize}
 
-We observe that the alternate implementations collectively offer
+We observe that the customized implementations collectively offer
 substantive benefits with regard to PCM writes -- the number is typically
 brought down \emph{by a factor of two to three}.  Concurrently, the query
 response times are also brought down by about \emph{20 to 30 percent}. Overall, these outcomes augur well for the impending migration of database

@@ -10,12 +10,11 @@ writes and limited write endurance. Accordingly, recent research
 has investigated how database engines may be redesigned to
 suit DBMS deployments on the new technology.
 
-In this paper, we address the pragmatic goal of designing PCM-conscious database operators
-using ``off-the-shelf'' techniques for minimal integration effort with existing systems. Specifically, we target implementations of ``workhorse'' database operators: \emph{sort},
+In this paper, we address the pragmatic goal of minimally altering current implementations of database operators to make them PCM-conscious - the objective being to facilitate an early transition to the new technology. Specifically, we target implementations of ``workhorse'' database operators: \emph{sort},
 \emph{hash join} and \emph{group-by} that substantively improve write performance without compromising on execution times. We provide simple but effective \emph{estimators} of the writes incurred by these techniques,
 and use them to redesign the database query optimizer cost model.
-We test these techniques on \emph{end-to-end} TPC-H benchmark queries on writes, latency and wear distributions metrics. Our experimental results
-suggest that the PCM-conscious operators collectively reduce the number
+These techniques are evaluated on \emph{end-to-end} TPC-H benchmark queries with regard to writes, response time and wear distributions metrics. Our experimental results
+indicate that the PCM-conscious operators collectively reduce the number
 of writes by a factor of 2 to 3, while concurrently improving the query
 response times by about 20 to 30\%. In essence, our algorithms provide both short-term and
 long-term benefits. These outcomes augur well for database engines that
