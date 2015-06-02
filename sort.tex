@@ -1,44 +1,58 @@
 \section{The Sort Operator}
 \label{sort}
 
-The quicksort algorithm is the commonly used sorting algorithm in database systems. In the
-single pivot quicksort algorithm with $n$ elements, the average number
-of swaps is of the order of $0.3nln(n)$~\cite{swaps}. If the initial array is much larger than the DRAM size, it would
-entail evictions from the DRAM during the swapping process of
-partitioning. These evictions might lead to PCM writes if the evicted
-DRAM lines are \textit{dirty}, which is likely since elements are being
-swapped. If the resulting partition sizes continue to be larger than
-DRAM, partitioning them in turn will again cause DRAM evictions and
-consequent writes. Clearly, this trend of writes will continue in the
-recursion tree until the partition sizes become small enough to fit within
-DRAM. Thereafter, there would be no further evictions during swapping
-and the remaining sorting process would finish within the DRAM.
+The quicksort algorithm is the most commonly used sorting algorithm
+in database systems. In the single pivot quicksort algorithm
+with $n$ elements, the average number of swaps is of the order of
+$0.3nln(n)$~\cite{swaps}. If the initial array is much larger than the
+DRAM size, it would entail evictions from the DRAM during the swapping
+process of partitioning. These evictions might lead to PCM writes if the
+evicted DRAM lines are \textit{dirty}, which is likely since elements are
+being swapped. If the resulting partition sizes continue to be larger
+than DRAM, partitioning them in turn will again cause DRAM evictions
+and consequent writes. Clearly, this trend of writes will continue in
+the recursion tree until the partition sizes become small enough to
+fit within DRAM. 
 
-From the above discussion, it is clear that it would be desirable for a sorting algorithm to be in-place, converge fast to partition sizes within DRAM size with less amount of swaps. We pick an alternate algorithm - flashsort \cite{flashsort} - which has these properties. Specifically, flashsort can potentially form DRAM sized partitions in a \emph{single} partitioning step with at most $N_R$ swaps. The sorting is done in-place with a time complexity of $O(N_Rlog_2N_R)$ with constant extra space\footnote{The time complexity can be brought down to $O(N_R)$ with $O(N_R)$ extra space}. The flashsort algorithm proceeds in three phrases: \emph{Classification Phase}, \emph{Permutation Phase} and \emph{Short-range Ordering Phase}. The classification phase divides the input data into $p$ partitions where $p$ is given as input. Given an element with value $v$, $Partition(v) = 1 + \lfloor \frac{(p-1)(v- v_{min})}{v_{max}-v_{min}} \rfloor$; $v_{min}$ and $v_{max}$ being the smallest and the largest values in the array, respectively. It then counts the number of elements in each such partition to get the boundary information. The permutation phase moves the elements to their respective partitions. The individual partitions are then finally sorted in the Short-range Ordering Phase to get the overall sorted array.
 
-We choose the number of partitions $p$ to be $\lceil c \times \frac{N_R L_R}{D} \rceil$, where $c \geq 1$ is a design
-parameter, to cater to the possibility that some partitions might turn out to be larger than the DRAM size if the data is not uniformly distributed. In our experience, setting $c = 2$ worked well in practice.
+From the above discussion, it is clear that it would be desirable
+for the sorting algorithm to converge fast to partition sizes within
+DRAM size with fewer number of swaps. For uniformly-distributed data\footnote{For data with skewed distribution, we have a modified flashsort algorithm  called \emph{multi-pivot flashsort}, which is discussed in \cite{techreport}.}, these requirements are satisfied by
+\emph{flashsort}~\cite{flashsort}. Specifically, flashsort can potentially
+form DRAM-sized partitions in a \emph{single} partitioning step with at
+most $N_R$ swaps. The sorting is done in-place with a time complexity
+of $O(N_Rlog_2N_R)$ with constant extra space.
 
-%\input{read_phase_algo}
+The flashsort algorithm proceeds in three phases: \emph{Classification
+Phase}, \emph{Permutation Phase} and \emph{Short-range Ordering
+Phase}. The classification phase divides the input data into $p$
+partitions where $p$ is given as input. Given an element with value $v$,
+$Partition(v) = 1 + \lfloor \frac{(p-1)(v- v_{min})}{v_{max}-v_{min}}
+\rfloor$; $v_{min}$ and $v_{max}$ being the smallest and the largest
+values in the array, respectively. It then counts the number of elements
+in each such partition to get the boundary information. The permutation
+phase moves the elements to their respective partitions. The individual
+partitions are then finally sorted in the Short-range Ordering Phase to
+get the overall sorted array.
 
-For partitions that turn
-out to be within the DRAM size, the Short-range Ordering phase is completed using
-quicksort. On the other hand, if some larger-sized
-partitions still remain, we recursively apply the flashsort
-algorithm to sort them until all the resulting partitions fit within DRAM and finish sorting with lesser evictions.
+We choose the number of partitions $p$ to be $\lceil c \times \frac{N_R
+L_R}{D} \rceil$, where $c \geq 1$ is a design parameter, to cater to the space requirements of additional data structures during sorting. In our experience,
+setting $c = 2$ works well in practice. The resulting partitions, each having size less than $D$, are finally sorted in the Short-range Ordering phase using quicksort.
+
+
 
 \textbf{PCM write analysis}: Though the partition boundary counters
 are continuously updated during the Classification phase, they are expected to
 incur very few PCM writes. This is because since all those updates are
 in quick succession, the counters are unlikely to be evicted from DRAM
-\emph{during} the update process. During the
+\emph{during} the update process. Next, during the
 Permutation phase, there will be no more than $N_R L_R$ writes since each tuple is written
-at most once while placing it within its partition boundaries. If each
+at most once while placing it within its partition boundaries. Since each
 partition is within the DRAM size, the Short-range Ordering phase (for each partition)
 will finish within DRAM and there will be another $N_R L_R$ writes upon
 eventual eviction of sorted partitions to PCM. 
 
-Thus, for the case of uniform data distribution, the writes incurred by this algorithm is estimated by
+Thus, the writes incurred by this algorithm is estimated by
 \begin{equation}
 \label{eq:sort}
   W_{sort} = 2N_RL_R

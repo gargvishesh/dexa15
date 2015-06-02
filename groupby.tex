@@ -5,14 +5,12 @@ forms the basis for aggregate function computations in SQL queries.
 Common methods for implementing group-by include \textit{sorting} and
 \textit{hashing} -- the specific choice of method depends both on the
 constraints associated with the operator expression itself as well as
-on the operators following later in the plan tree.
+on the operators following later in the plan tree. We discuss the
+PCM-conscious modifications of both implementations below. Note that
+the writes due to \emph{output} tuples is $G \times size_g$ in
+both implementations.
 
-In the following subsections, we begin by considering the hash-based
-group-by operator and present our modifications of this technique for
-the PCM environment. Subsequently, we move on to a similar discussion
-for sort-based group-by implementation. In both these algorithms, the writes due to \emph{output} tuples, is $G \times size_g$.
-
-\subsection{Hash Based Grouping}
+\subsection{Hash-Based Grouping}
 
 A hash table entry for group-by, as compared to the corresponding
 entry in hash join, has an additional field containing the aggregate
@@ -32,7 +30,7 @@ a page-based hash table organization, and a reduced hash value size,
 to reduce the writes to PCM.
 
 \textbf{PCM write analysis}: From the above discussion, it is easy to see
-that the total writes incurred for the PCM-conscious hash based group-by is given by
+that the total writes incurred for the PCM-conscious hash-based group-by is given by
 \begin{equation}
 \label{eq:gb_ht}
 \begin{split}
@@ -41,7 +39,7 @@ N_R \times size_{agg\_field} + G \times size_g
 \end{split}
 \end{equation}
 
-\subsection{Sort Based Grouping}
+\subsection{Sort-Based Grouping}
 
 Sorting may be used for group-by when a fully ordered operator such
 as \textit{order by} or \textit{merge join} appears downstream in the plan
@@ -49,7 +47,7 @@ tree. Another use case is for queries with a \textit{distinct} clause
 in the aggregate expression, in order to identify the duplicates that have
 to be discarded from the aggregate.  
 
-Sorting based group-by differs in a key aspect from sorting itself
+Sorting-based group-by differs in a key aspect from sorting itself
 in that that the sorted tuples do not have to be written out. Instead, it
 is the aggregated tuples that are finally passed on to the next operator
 in the plan tree. Hence, we can modify the flashsort algorithm of

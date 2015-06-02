@@ -16,23 +16,22 @@ allocated and is connected to existing entries using a pointer. Thus,
 such an approach incurs an additional pointer write each time a new
 entry is inserted.
 
-Our first proposal is to allocate space to hash buckets in units of
-fixed size called \textit{pages} \cite{paging}. A page contains a set of contiguous
+Our first modification is to use a well-known technique of allocating space to hash buckets in units of \textit{pages} \cite{paging}. A page is of a fixed size and contains a set of contiguous
 entries, the maximum count of entries being fixed depending on the size
 of the page and the size of the entry. When a page overflows a new page
 is allocated and linked to the overflowing page via a pointer.  Thus,
 unlike the conventional hash table wherein each \emph{pair} of entries
 are connected using pointers, the interconnecting pointer here is only
-at page granularity. Note that although open-addressing is another alternative for avoiding pointers, probing for a join attribute value would have to search through the entire table each time; since the inner table might contain \emph{multiple} tuples with the same join attribute value.
+at page granularity. Note that although open-addressing is another alternative for avoiding pointers, probing for a join attribute value would have to search through the entire table each time, since the inner table might contain \emph{multiple} tuples with the same join attribute value.
 
 A control bitmap is used to indicate whether each entry in a page is vacant
 or occupied, a necessary information during both insertion and search in the
 hash table. Each time a bucket runs out of space, a new page is allocated
 to the bucket. Though such an approach  may lead to space wastage when
 some of the pages are not fully occupied, we save on the numerous pointer
-writes that are incurred when space is allocated on a per-entry basis.
+writes that are otherwise incurred when space is allocated on a per-entry basis.
 
-We can reduce the writes incurred due to storing of the hash values in
+Secondly, we can reduce the writes incurred due to storing of the hash values in
 the hash table by restricting the length to just a single byte. In this
 manner, we trade-off precision for fewer writes. If the hash function
 distributes the values in each bucket in a perfectly uniform manner, it
@@ -45,7 +44,7 @@ column values from PCM due to the possibility of false positives.
 \textbf{PCM write analysis}: We ignore the writes incurred while initializing each hash table bucket since they are negligible in comparison to inserting the actual entries. Assuming there are $E_{page}$ entries per page, there would now be one pointer per $E_{page}$ entries. Additionally, for each insertion, a bit write would be incurred due to the bitmap update. The join tuples would also incur writes which is given by $J \times size_j$. Thus, the total writes for hash join would be
 $$W_{hj} = N_R \times (size_{entry} +  \frac{P}{E_{page}} + \frac{1}{8} ) + J \times size_{j}$$
 Since in practice both  $\frac{P}{E_{page}}$ and $\frac{1}{8}$ are small as compared to $size_{entry}$, 
-\vspace{-0.1in}
+\vspace{-0.05in}
 \begin{equation}\label{eq:hj}
  W_{hj} \approx N_R \times size_{entry} + J \times size_{j} 
 \end{equation} 

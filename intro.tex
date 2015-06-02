@@ -15,7 +15,7 @@ systems, either augmenting or replacing current components in the memory
 hierarchy~\cite{qureshi,zhou,lee}.
 
 A limitation of PCM, however, is that there is a significant difference
-between the read and write behaviours in terms of energy, latency and
+between the read and write behaviors in terms of energy, latency and
 bandwidth. A PCM write, for example, consumes 6 times more energy than
 a read. Moreover, PCM has limited write endurance since a memory cell
 becomes unusable after the number of writes to the cell exceed a threshold
@@ -24,7 +24,6 @@ researchers have, in recent times, focused their attention on devising
 new implementations of the core database operators that are adapted to
 the idiosyncrasies of the PCM environment (e.g.~\cite{chen,viglas}). 
 
-%\newpage
 \subsection*{Architectural Model}
 The prior database work has primarily focused on computing
 architectures wherein either (a) PCM completely replaces the
@@ -34,10 +33,11 @@ hereafter refer to these options as {\bf \modelPcmRam{}} and
 {\bf \modelExplicit{}}, respectively.
 
 However, a third option that is gaining favor in the architecture
-community is where the PCM is augmented with a small hardware-managed
-DRAM buffer~\cite{qureshi}. In this model, which we refer to as
-{\bf \model{}}, the address space of the application maps to PCM and the
-DRAM buffer can simply be visualized as yet another level of the existing
+community, and was also mooted in \cite{chen} from the database
+perspective, is where the PCM is augmented with a small hardware-managed
+DRAM buffer~\cite{qureshi}. In this model, which we refer to as {\bf
+\model{}}, the address space of the application maps to PCM and the DRAM
+buffer can simply be visualized as yet another level of the existing
 cache hierarchy.  For ease of comparison, these various configurations
 are pictorially shown in Figure~\ref{fig:pcm_models}.
 
@@ -58,57 +58,54 @@ to DRAM and to PCM -- for example, by having separate address space
 mappings for the different memories.
 
 \subsection*{Our Work}
-We make the following contributions in this paper:
-\begin{itemize}
-\item Propose PCM-conscious implementations of the ``workhorse'' database operators:
-\textit{sort}, \textit{hash join} and \textit{group-by}, that are tuned to the \model{} model, that reduce
+In this paper, we propose PCM-conscious minimalist reworkings of current
+implementations of the ``workhorse'' database operators: \textit{sort},
+\textit{hash join} and \textit{group-by}, that are tuned to the \model{}
+model.  
+These modifications are not only easy to implement but are attractive from the performance perspective also, simultaneously reducing
 \emph{both} query writes and response times.
+The new operator implementations are implemented on Multi2sim
+\cite{multi2sim}, a state-of-the-art architectural simulator, after
+incorporating major extensions to support modelling of the \model{}
+PCM configuration.  Their performance is evaluated on \emph{complete}
+TPC-H benchmark queries. This is a noteworthy point since earlier studies
+of PCM databases had only considered operator performance in isolation.
+But, it is possible that optimizing a specific operator may be detrimental
+to downstream operators that follow it in the query execution plan. For
+instance, the proposal in \cite{chen} to keep nodes unsorted in B$^+$
+indexes, while saving on writes, can be detrimental to the running
+times of subsequent operators, e.g. join filters, that leverage index
+ordering.  Finally, we include the metric of \emph{wear distribution}
+in our evaluation to ensure that the reduction in writes is not achieved
+at the cost of skew in wear-out of cells.
 
-\item Incorporate major extensions in Multi2sim \cite{multi2sim},
-a state-of-the-art architectural simulator, to support the modelling of \model{} configuration of PCM.  
+Our simulation results indicate that the customized implementations
+collectively offer substantive benefits with regard to PCM writes --
+the number is typically brought down \emph{by a factor of two to three}.
+Concurrently, the query response times are also brought down by about
+\emph{20 to 30 percent}. As a sample case in point, for TPC-H Query 19,
+savings of 64\% in PCM writes are achieved with a concomitant 32\%
+reduction in CPU cycles. 
 
+Fully leveraging the new implementations requires integration with
+the query optimizer, an issue that has been largely overlooked in
+the prior literature. We take a first step here by providing simple
+but effective statistical \emph{estimators} for the number of writes
+incurred by the new operators under uniform data distribution scenarios,
+and incorporating these estimators in the query optimizer's cost model.
+Sample results demonstrating that the resultant plan choices provide
+substantively improved performance are provided in our experimental study.
 
+Overall, the above outcomes augur well for the impending migration
+of database engines to PCM-based computing platforms.
 
-\item Evaluate the proposed implementation on \emph{complete} TPC-H benchmark queries.This is a noteworthy point since earlier studies of PCM databases had only
-considered operator performance in isolation.  But, it is possible that
-optimizing a specific operator may be detrimental to other downstream
-operators that follow it in the query execution plan. For instance,
-the proposal in \cite{chen} to keep nodes unsorted in B$^+$ indexes,
-while saving on writes, can be detrimental to the running times of
-subsequent operators, e.g. join filters, that leverage index ordering. The metric of \emph{wear  distribution} is also included in our evaluation.
-
-
-\item Provide simple but effective statistical \emph{estimators} for the
-number of writes incurred by the new operators for uniform data distribution scenarios, and incorporate them in the query optimizer's
-cost model. Such an exercise hasn't been carried out in prior literature.
-
-\end{itemize}
-
-We observe that the customized implementations collectively offer
-substantive benefits with regard to PCM writes -- the number is typically
-brought down \emph{by a factor of two to three}.  Concurrently, the query
-response times are also brought down by about \emph{20 to 30 percent}. Overall, these outcomes augur well for the impending migration of database
-engines to PCM-based computing platforms.
-
- 
- 
- 
-\begin{comment}
- Our 
-
-The experimental results suggest that, as compared to the original
-PCM-oblivious operators, 
-As a sample case in point, for TPC-H Query 19, savings of 64\% in PCM
-writes are achieved with a concomitant 32\% reduction in CPU cycles.
-
-A unique feature of our analysis is that we also . This is because
-a skewed distribution adversely impacts the endurance of cells with high
-write rates, raising the frequency at which wear-leveling mechanisms
-have to be put into play by the system. We observe that our algorithms don't introduce any new skew while achieving the reduction in writes and cycles.
-
-Finally, 
-
-In a nutshell, the new PCM-conscious operators proposed in this paper
-provide both \emph{short-term and long-term performance benefits}.
-
-\end{comment}
+\subsection*{Organization}
+The remainder of this paper is organized as follows: We define the
+problem framework in Section~\ref{sec:framework}. The design of the new
+PCM-conscious database operators, and their PCM write analyses,
+are presented in Sections~\ref{sort}, \ref{hj} and \ref{gby}.
+Our experimental framework and the simulation results are reported in
+Sections~\ref{sec:exp} and \ref{sec:results}, respectively. This is followed by a
+discussion on optimizer integration in Section~\ref{discussion}. Finally,
+Section~\ref{conclusion} summarizes our conclusions and outlines future
+research avenues.
